@@ -417,7 +417,7 @@ class Object(with_metaclass(ObjectMeta, object)):
             if not isinstance(v, operation.BaseOp):
                 v = operation.Set(v)
 
-            self._attributes[k] = v._apply(self._attributes.get(k),self, key)
+            self._attributes[k] = v._apply(self._attributes.get(k),self, k)
             if self._attributes[k] == operation._UNSET:
                 del self.attributes[k]
             self.changes[k] = v._merge(self.changes.get(k))
@@ -495,7 +495,7 @@ class Object(with_metaclass(ObjectMeta, object)):
         """
         response = client.get('/classes/{0}/{1}'.format(self._class_name, self.id), {})
         result = self.parse(response.json(), response.status_code)
-        self._finish_save(result, True)
+        self._finish_save(result)
         self.existed = True
 
     def parse(self, content, status_code=None):
