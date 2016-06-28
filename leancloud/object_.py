@@ -217,13 +217,13 @@ class Object(with_metaclass(ObjectMeta, object)):
         #self._start_save()
 
         data = self._dump_save()
-        print(data)
-        #fetch_when_save = 'true' if self.fetch_when_save else 'false'
+        fetch_when_save = 'true' if self.fetch_when_save else 'false'
 
         if self.is_new():
-            response = client.post('/classes/{0}?fetchWhenSave={1}'.format(self._class_name, self.fetch_when_save), data)
+            response = client.post('/classes/{0}?fetchWhenSave={1}'.format(self._class_name, fetch_when_save), data)
         else:
-            url = '/classes/{0}/{1}?fetchWhenSave={2}'.format(self._class_name, self.id, self.fetch_when_save)
+            url = '/classes/{0}/{1}?fetchWhenSave={2}'.format(self._class_name, self.id, fetch_when_save)
+            print(url)
             if where:
                 url += '&where=' + json.dumps(where.dump()['where'], separators=(',', ':'))
             response = client.put(url, data)
