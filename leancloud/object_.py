@@ -8,7 +8,6 @@ import time
 import copy
 import json
 import warnings
-from datetime import datetime
 
 import iso8601
 from werkzeug import LocalProxy
@@ -75,7 +74,7 @@ class Object(with_metaclass(ObjectMeta, object)):
         self.changes = {}
         self._attributes = {}
 
-        self._existed = False
+        #self._existed = False
 
         self.created_at = None
         self.updated_at = None
@@ -223,13 +222,12 @@ class Object(with_metaclass(ObjectMeta, object)):
             response = client.post('/classes/{0}?fetchWhenSave={1}'.format(self._class_name, fetch_when_save), data)
         else:
             url = '/classes/{0}/{1}?fetchWhenSave={2}'.format(self._class_name, self.id, fetch_when_save)
-            print(url)
             if where:
                 url += '&where=' + json.dumps(where.dump()['where'], separators=(',', ':'))
             response = client.put(url, data)
 
 
-        self._finish_save(self.parse(response.json(), response.status_code))
+        self._bind_data(response.json())
 
     def _deep_save(self, unsaved_children, unsaved_files, exclude=None):
         if exclude:
@@ -262,8 +260,8 @@ class Object(with_metaclass(ObjectMeta, object)):
                 errors.append(leancloud.LeanCloudError(content.get('code'), content.get('error')))
                 #obj._cancel_save()
             else:
-                result = obj.parse(content['success'])
-                obj._finish_save(result)
+                #result = obj.parse(content['success'])
+                obj._bind_data(content['success'])
 
             if errors:
                 # TODO: how to raise list of errors?
@@ -312,7 +310,7 @@ class Object(with_metaclass(ObjectMeta, object)):
             'objectId': self.id,
         }
 
-    def _merge_magic_field(self, server_data):
+    def _merge_metadata(self, server_data):
         for key in ('objectId', 'createdAt', 'updatedAt'):
             if server_data.get(key) is None:
                 continue
@@ -407,7 +405,7 @@ class Object(with_metaclass(ObjectMeta, object)):
 
         self.validate(attrs)
 
-        self._merge_magic_field(attrs)
+        self._merge_metadata(attrs)
 
         keys = list(attrs.keys())
         for k in keys:
@@ -419,7 +417,7 @@ class Object(with_metaclass(ObjectMeta, object)):
 
             self._attributes[k] = v._apply(self._attributes.get(k),self, k)
             if self._attributes[k] == operation._UNSET:
-                del self.attributes[k]
+                del self._attributes[k]
             self.changes[k] = v._merge(self.changes.get(k))
 
         return self
@@ -494,16 +492,16 @@ class Object(with_metaclass(ObjectMeta, object)):
         :return: 当前对象
         """
         response = client.get('/classes/{0}/{1}'.format(self._class_name, self.id), {})
-        result = self.parse(response.json(), response.status_code)
-        self._finish_save(result)
-        self.existed = True
+        #result = self.parse(response.json(), response.status_code)
+        self._bind_data(response.json())
+        #self.existed = True
 
-    def parse(self, content, status_code=None):
-        self._existed = True
-        #if status_code == 201:
-        #    self._existed = False
-
-        return content
+#    def parse(self, content, status_code=None):
+#        self._existed = True
+#        #if status_code == 201:
+#        #    self._existed = False
+#
+#        return content
 
     def is_new(self):
         """
@@ -514,7 +512,7 @@ class Object(with_metaclass(ObjectMeta, object)):
         return False if self.id else True
 
     def is_existed(self):
-        return self._existed
+        return bool(self.id)
 
     def get_acl(self):
         """
@@ -549,27 +547,27 @@ class Object(with_metaclass(ObjectMeta, object)):
         timestamp = int(time.time() * 1000)
         return self.set('__after', utils.sign_disable_hook('__after_for_' + self._class_name, master_key, timestamp))
 
-    def _finish_save(self, server_data):
+    def _bind_data(self, server_data):
 #        saved_changes = self._op_set_queue[0]
 #        self._op_set_queue = self._op_set_queue[1:]
 #        self._apply_op_set(saved_changes, self._server_data)
-        self._merge_magic_field(server_data)
-        for key, value in iteritems(server_data):
-            self.attributes[key] = utils.decode(key, value)
-        self.changes = {}
-#        self._rebuild_attributes()
-
-    def _finish_fetch(self, server_data, existed):
-#        self._op_set_queue = [{}]
-        self._merge_magic_field(server_data)
+        self._merge_metadata(server_data)
         for key, value in iteritems(server_data):
             self._attributes[key] = utils.decode(key, value)
-#        self._rebuild_attributes()
-#        self._op_set_queue = [{}]
-        self._existed = existed
         self.changes = {}
+#        self._rebuild_attributes()
 
-    def _rebuild_attribute(self, key):
+#    def _finish_fetch(self, server_data, existed):
+##        self._op_set_queue = [{}]
+#        self._merge_metadata(server_data)
+#        for key, value in iteritems(server_data):
+#            self._attributes[key] = utils.decode(key, value)
+##        self._rebuild_attributes()
+##        self._op_set_queue = [{}]
+#        #self._existed = existed
+#        self.changes = {}
+
+#    def _rebuild_attribute(self, key):
 #        if self._attributes.get(key):
 #            del self._attributes[key]
 #
@@ -580,9 +578,9 @@ class Object(with_metaclass(ObjectMeta, object)):
 #            o = self.changes.get(key)
 #            if o is None:
 #                continue
-            self._attributes[key] = self.changes[key]._apply(self._attributes.get(key), self, key)
-            if self._attributes[key] is operation._UNSET:
-                del self._attributes[key]
+#            self._attributes[key] = self.changes[key]._apply(self._attributes.get(key), self, key)
+#            if self._attributes[key] is operation._UNSET:
+#                del self._attributes[key]
 
 #    def _rebuild_attributes(self):
 #        self._attributes = copy.deepcopy(self._server_data)

@@ -99,7 +99,7 @@ def decode(key, value):
             value.pop('className')
             pointer._finish_fetch(value, True)
         else:
-            pointer._finish_fetch({'objectId': value['objectId']}, False)
+            pointer._bind_data({'objectId': value['objectId']})
         return pointer
 
     if _type == 'Object':
