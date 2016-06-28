@@ -265,7 +265,8 @@ class Object(with_metaclass(ObjectMeta, object)):
 
             if errors:
                 # TODO: how to raise list of errors?
-                # http://stackoverflow.com/questions/9875660/idiomatic-way-to-collect-report-multiple-exceptions-in-python
+                # raise MultipleValidationErrors(errors)
+                # add test
                 raise errors[0]
 
     @classmethod
@@ -285,7 +286,7 @@ class Object(with_metaclass(ObjectMeta, object)):
         utils.traverse_object(obj, callback)
 
     def is_dirty(self, attr=None):
-        #consider renaming to is_changed ?
+        #consider renaming to is_changed?
         if attr:
             return attr in self.changes
         else:
