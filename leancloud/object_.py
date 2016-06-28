@@ -211,13 +211,13 @@ class Object(with_metaclass(ObjectMeta, object)):
         unsaved_children = []
         unsaved_files = []
         self._find_unsaved_children(self._attributes, unsaved_children, unsaved_files)
-        if len(unsaved_children) + len(unsaved_files) > 0:
+        if unsaved_children or unsaved_files:
             self._deep_save(unsaved_children, unsaved_files, exclude=self._attributes)
 
         #self._start_save()
 
         data = self._dump_save()
-
+        print(data)
         #fetch_when_save = 'true' if self.fetch_when_save else 'false'
 
         if self.is_new():
@@ -275,7 +275,7 @@ class Object(with_metaclass(ObjectMeta, object)):
 
         def callback(o):
             if isinstance(o, Object):
-                if o.change or not o.id:
+                if o.is_dirty():
                     children.append(o)
                 return
 
@@ -286,7 +286,12 @@ class Object(with_metaclass(ObjectMeta, object)):
 
         utils.traverse_object(obj, callback)
 
-#    def is_dirty(self, attr=None):
+    def is_dirty(self, attr=None):
+        #consider renaming to is_changed ?
+        if attr:
+            return attr in self.changes
+        else:
+            return bool(not self.id or self.changes)
 #        current_changes = self._op_set_queue[-1]
 #
 #        if attr is not None:
@@ -488,12 +493,13 @@ class Object(with_metaclass(ObjectMeta, object)):
         """
         response = client.get('/classes/{0}/{1}'.format(self._class_name, self.id), {})
         result = self.parse(response.json(), response.status_code)
-        self._finish_fetch(result, True)
+        self._finish_save(result, True)
+        self.existed = True
 
     def parse(self, content, status_code=None):
         self._existed = True
-        if status_code == 201:
-            self._existed = False
+        #if status_code == 201:
+        #    self._existed = False
 
         return content
 
@@ -541,23 +547,25 @@ class Object(with_metaclass(ObjectMeta, object)):
         timestamp = int(time.time() * 1000)
         return self.set('__after', utils.sign_disable_hook('__after_for_' + self._class_name, master_key, timestamp))
 
-#    def _finish_save(self, server_data):
+    def _finish_save(self, server_data):
 #        saved_changes = self._op_set_queue[0]
 #        self._op_set_queue = self._op_set_queue[1:]
 #        self._apply_op_set(saved_changes, self._server_data)
-#        self._merge_magic_field(server_data)
-#        for key, value in iteritems(server_data):
-#            self._server_data[key] = utils.decode(key, value)
+        self._merge_magic_field(server_data)
+        for key, value in iteritems(server_data):
+            self.attributes[key] = utils.decode(key, value)
+        self.changes = {}
 #        self._rebuild_attributes()
 
     def _finish_fetch(self, server_data, existed):
 #        self._op_set_queue = [{}]
         self._merge_magic_field(server_data)
-#        for key, value in iteritems(server_data):
-#            self._server_data[key] = utils.decode(key, value)
+        for key, value in iteritems(server_data):
+            self._attributes[key] = utils.decode(key, value)
 #        self._rebuild_attributes()
 #        self._op_set_queue = [{}]
         self._existed = existed
+        self.changes = {}
 
     def _rebuild_attribute(self, key):
 #        if self._attributes.get(key):
@@ -570,7 +578,7 @@ class Object(with_metaclass(ObjectMeta, object)):
 #            o = self.changes.get(key)
 #            if o is None:
 #                continue
-            self._attributes[key] = self.change[key]._apply(self._attributes.get(key), self, key)
+            self._attributes[key] = self.changes[key]._apply(self._attributes.get(key), self, key)
             if self._attributes[key] is operation._UNSET:
                 del self._attributes[key]
 
