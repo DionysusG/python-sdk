@@ -417,8 +417,10 @@ class Object(with_metaclass(ObjectMeta, object)):
             if not isinstance(v, operation.BaseOp):
                 v = operation.Set(v)
 
+            self._attributes[k] = v._apply(self._attributes.get(k),self, key)
+            if self._attributes[k] == operation._UNSET:
+                del self.attributes[k]
             self.changes[k] = v._merge(self.changes.get(k))
-            self._rebuild_attribute(k)
 
         return self
 
