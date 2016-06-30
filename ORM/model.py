@@ -4,7 +4,6 @@ import iso8601
 import warnings
 
 import leancloud
-from leancloud import client
 
 import field
 
@@ -20,7 +19,7 @@ class BaseModel(type):
 
 class Model(six.with_metaclass(BaseModel)):
     def __init__(self, **kargv):
-        self._object = leancloud._object.Object()
+        self._object = leancloud.object_.Object()
         for key in kargv:
             if not key in self.fields:
                 raise AttributeError('There is no {} field in the model'.format(key))
@@ -37,7 +36,7 @@ class Model(six.with_metaclass(BaseModel)):
             self.fields[name].verify(value)
             self.object.set(name, value)
         else:
-            warnings.warn('There the value is not set to a field', leancloud.errors.LeanCloudWarning)
+            warnings.warn('There the value is not set to a field')
             self.in_class_setattr(name, value)
 
     def __delattr__(self, name):
@@ -48,7 +47,7 @@ class Model(six.with_metaclass(BaseModel)):
 
     def __getattr__(self, name):
         try:
-            return self._object._attribute[name]
+            return self._object._attributes[name]
         except KeyError:
             raise AttributeError('{0} does not have the attribute {1}'.format(self.name, name))
 
