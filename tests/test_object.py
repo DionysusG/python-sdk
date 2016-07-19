@@ -13,6 +13,8 @@ from nose.tools import assert_raises
 
 import leancloud
 from leancloud import Object
+from leancloud.object_ import as_class_name
+
 
 __author__ = 'asaka <lan@leancloud.rocks>'
 
@@ -343,3 +345,14 @@ def test_setting_None():
     album = Album()
     album.set('roker', None)
     eq_(album._changes.get('roker', 'no_key'), 'no_key')
+
+def test_as_class_name_decorator():
+    @as_class_name
+    class Philosopher(User):
+        pass
+    @as_class_name('student')
+    class Plato(User):
+        pass
+
+    assert Philosopher._class_name == 'Philosopher'
+    assert Plato._class_name == 'student'
